@@ -11,12 +11,12 @@ from nbformat import read
 from IPython.core.interactiveshell import InteractiveShell
 
 # Consumer credentials:
-CONSUMER_KEY    = '9GV0tEo703uKuBbuoxurgypmj'
-CONSUMER_SECRET = 'MrMCNV1UKjLumM4vrZAUCQm86nrBj0QjCCaGob5gm4zbXKXQ85'
+CONSUMER_KEY    = ''
+CONSUMER_SECRET = ''
 
 # Access credentials:
-ACCESS_TOKEN  = '1974137701-1JZoGHyYG5npoAa3UCgHkhxacsTPAJrpZ2bN1Ja'
-ACCESS_SECRET = 'BnUDNerVrLgiBXIIjPYOCv6c340tHBFV08cadnTkMi1VX'
+ACCESS_TOKEN  = ''
+ACCESS_SECRET = ''
 
 def twitter_setup():
     """
