@@ -65,3 +65,23 @@ for RT_object in data['RTs']:
         max_RTs = RT_object
         
 return data.loc[(data['RTs'] == max_RTs)]
+
+#returns the key of the max value of the dic
+def get_min_dic_val(dic):
+    min = (dic.keys())[0]
+    for key in dic:
+        if dic[key] > dic[min]:
+            max = key
+    return min
+
+#gets 5 songs with the top "best" calculation
+def get_best_songs(song_dictionary):
+    sd_recalculated = {}
+    for key in song_dictionary:
+        (sd_recalculated[key]) = (song_dictionary[key])[0] * 7.5 + (song_dictionary[key])[1]
+    print(sd_recalculated)    
+    #treat "best" as sentiment + recalculated occurrences
+    top5 = dict(sorted(sd_recalculated.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
+    print(top5.keys())
+    
+get_best_songs(song_dictionary)
