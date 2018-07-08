@@ -4,19 +4,15 @@ import numpy as np
 from IPython.display import display
 import matplotlib.pyplot as plt
 import seaborn as sns
-%matplotlib inline
-import io, os, sys, types
-from IPython import get_ipython
-from nbformat import read
-from IPython.core.interactiveshell import InteractiveShell
-
-# Consumer credentials:
-CONSUMER_KEY    = ''
-CONSUMER_SECRET = ''
-
-# Access credentials:
-ACCESS_TOKEN  = ''
-ACCESS_SECRET = ''
+import re
+import copy
+import operator
+import spotipy
+import sys
+import spotipy.util as util
+import datetime
+import json
+import config
 
 def twitter_setup():
     """
@@ -24,64 +20,67 @@ def twitter_setup():
     with our access keys provided.
     """
     # Authentication and access using keys:
-    auth = tweepy.OAuthHandler(CONSUMER_KEY, CONSUMER_SECRET)
-    auth.set_access_token(ACCESS_TOKEN, ACCESS_SECRET)
+    auth = tweepy.OAuthHandler(config.TWITTER_CONSUMER_KEY, config.TWITTER_CONSUMER_SECRET)
+    auth.set_access_token(config.TWITTER_ACCESS_TOKEN, config.TWITTER_ACCESS_SECRET)
 
     # Return API with authentication:
     api = tweepy.API(auth)
     return api
-    
-# We create an extractor object:
+
+# Create an extractor object:
 extractor = twitter_setup()
 
-# We create a tweet list as follows:
-tweets = extractor.user_timeline(screen_name="hillydilly", count=200)
-print("Number of tweets extracted: {}.\n".format(len(tweets)))
+# Creating hillydilly tweet list
+hillydilly_tweets = extractor.user_timeline(screen_name="hillydilly", count=200, include_rts = False, tweet_mode = "extended")
 
-# We print the most recent 5 tweets:
-print("5 recent tweets:\n")
-for tweet in tweets[:5]:
-    print(tweet.text)
-    print()
-    
+#expanding the accepted string length so that tweets will not be truncated
+pd.set_option('max_colwidth',1000)
+
 # creating a pandas dataframe
-data = pd.DataFrame(data=[tweet.text for tweet in tweets], columns=['Tweets'])
+tweetdata = []
+for tweet in hillydilly_tweets:
+    tweetdata.append(tweet.full_text)
+hillydilly_data = pd.DataFrame(tweetdata, columns=['Tweets'])
+hillydilly_data['Likes']  = np.array([tweet.favorite_count for tweet in hillydilly_tweets])
+hillydilly_data['RTs']    = np.array([tweet.retweet_count for tweet in hillydilly_tweets])
+hillydilly_data['General_sentiment'] = hillydilly_data['Likes'] + hillydilly_data['RTs']
 
-# Displaying first 10 elements
-display(data.head(10))
+def match_quotes(text):  
+    matches = re.findall(r'\"(.+?)\"', text)
+    if len(matches) > 0:
+        return matches[0]
+    raise ValueError("no matches")
 
-# We add relevant data:
-data['Date'] = np.array([tweet.created_at for tweet in tweets])
-data['Likes']  = np.array([tweet.favorite_count for tweet in tweets])
-data['RTs']    = np.array([tweet.retweet_count for tweet in tweets])
-
-max_likes = 0
-for likes_object in data['Likes']:
-    if likes_object > max_likes:
-        max_likes = likes_object
-max_RTs = 0
-for RT_object in data['RTs']:
-    if RT_object > max_RTs:
-        max_RTs = RT_object
-        
-return data.loc[(data['RTs'] == max_RTs)]
-
-#returns the key of the max value of the dic
-def get_min_dic_val(dic):
-    min = (dic.keys())[0]
-    for key in dic:
-        if dic[key] > dic[min]:
-            max = key
-    return min
-
-#gets 5 songs with the top "best" calculation
-def get_best_songs(song_dictionary):
-    sd_recalculated = {}
-    for key in song_dictionary:
-        (sd_recalculated[key]) = (song_dictionary[key])[0] * 7.5 + (song_dictionary[key])[1]
-    print(sd_recalculated)    
-    #treat "best" as sentiment + recalculated occurrences
-    top5 = dict(sorted(sd_recalculated.iteritems(), key=operator.itemgetter(1), reverse=True)[:5])
-    print(top5.keys())
+def match_quotes_with_dash(text):
+    matches = re.findall(r'\"(.+?)\"', text)
+    if len(matches) > 0:
+        artist_and_song = matches[0]
+        song_start_index = artist_and_song.find("-") + 2
+        return (artist_and_song[song_start_index:])
+    raise ValueError("no matches")
+#dashes test
+#print(match_quotes_with_dash('asddsa "asdsda - duality" asddas '))
+song_dictionary = {}    
     
-get_best_songs(song_dictionary)
+def add_songs_to_dic(song_dictionary, tweet_dataframe, quote_type):
+    for i, row in (tweet_dataframe).iterrows():
+        tweet = (row["Tweets"])
+        print(tweet)
+        try: 
+            if quote_type == "standard":
+                quoted_words = match_quotes(tweet)
+            elif quote_type == "dashes":
+                quoted_words = match_quotes_with_dash(tweet)
+            else:
+                raise ValueError("quote_type")
+            print(quoted_words)
+            # add the song to the song dictionary
+            # if the song is already in the dictionary, give it a +1 occurrence
+            if quoted_words in song_dictionary:
+                song_dictionary[quoted_words][0] = (song_dictionary[quoted_words])[0] + 1
+            else:
+                song_dictionary[quoted_words] = [1, (row["General_sentiment"])]
+        except ValueError as err:
+            print(err.args)
+
+add_songs_to_dic(song_dictionary, hillydilly_data, "standard") 
