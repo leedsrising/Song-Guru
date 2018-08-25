@@ -1,4 +1,4 @@
-# HitSongs_TwitterBot
+# Song Guru
 
 Current capabilities:
 * Create a way to analyze twitter posts from a number of song recommendation accounts (done)
